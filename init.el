@@ -3,7 +3,67 @@
 ;; installed packages.  Don't delete this line.  If you don't want it,
 ;; just comment it out by adding a semicolon to the start of the line.
 ;; You may delete these explanatory comments.
+(require 'package)
+(setq package-archives
+  '(("gnu" . "https://elpa.gnu.org/packages/")
+     ("melpa" . "https://melpa.org/packages/")
+     ("org" . "http://orgmode.org/elpa/")))
 (package-initialize)
+ 
+(defun require-package (package &optional min-version no-refresh)
+  "Install given PACKAGE, optionally requiring MIN-VERSION.
+If NO-REFRESH is non-nil, the available package lists will not be re-downloaded in order to locate PACKAGE."
+  (if (package-installed-p package min-version)
+    t
+    (if (or (assoc package package-archive-contents) no-refresh)
+      (if (boundp 'package-selected-packages)
+        ;; Record this as a package the user installed explicitly
+        (package-install package nil)
+        (package-install package))
+      (progn
+        (package-refresh-contents)
+        (require-package package min-version t)))))
+(defun maybe-require-package (package &optional min-version no-refresh)
+  "Try to install PACKAGE, and return non-nil if successful.
+In the event of failure, return nil and print a warning message.
+Optionally require MIN-VERSION.  If NO-REFRESH is non-nil, the
+available package lists will not be re-downloaded in order to
+locate PACKAGE."
+  (condition-case err
+    (require-package package min-version no-refresh)
+    (error
+      (message "Couldn't install optional package `%s': %S" package err)
+      nil)))
+
+;; Package list
+(require-package 'evil)
+(require-package 'evil-leader)
+(require-package 'company)
+(require-package 'company-quickhelp)
+
+(when (maybe-require-package 'evil)
+  (evil-mode 1))
+  
+(when (maybe-require-package 'evil-leader)
+  (global-evil-leader-mode)
+  (evil-leader/set-leader "<SPC>")
+  (evil-leader/set-key
+    "ff" 'find-file
+    "bb" 'switch-to-buffer
+    "0"  'select-window-0
+    "1"  'select-window-1
+    "2"  'select-window-2
+    "3"  'select-window-3
+    "w/" 'split-window-right
+    "w-" 'split-window-below
+    ":"  'counsel-M-x
+    "wM" 'delete-other-windows
+   ))
+
+(when (maybe-require-package 'company)
+  (add-hook 'after-init-hook'global-company-mode))
+(when (maybe-require-package 'company-quickhelp)
+  (add-hook 'after-init-hook'company-quickhelp-mode))
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -11,7 +71,9 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(custom-enabled-themes (quote (deeper-blue)))
- '(package-selected-packages (quote (evil-leader evil))))
+ '(package-selected-packages
+   (quote
+    (company-quickhelp company evil-leader evil))))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
@@ -20,6 +82,15 @@
  ;; If there is more than one, they won't work right.
  )
 
+;;中文与外文字体设置
+(defun set-font (english chinese english-size chinese-size)
+  (set-face-attribute 'default nil :font
+                      (format   "%s:pixelsize=%d"  english english-size))
+  (dolist (charset '(kana han symbol cjk-misc bopomofo))
+    (set-fontset-font (frame-parameter nil 'font) charset
+                      (font-spec :family chinese :size chinese-size))))
+
+(set-font   "Menlo" "Kaiti TC" 15 15)
 
 ;;
 ;; My personal settings
@@ -79,7 +150,7 @@
 
 ;; 更改显示字体大小 16pt
 ;; http://stackoverflow.com/questions/294664/how-to-set-the-font-size-in-emacs
-(set-face-attribute 'default nil :height 160)
+;; (set-face-attribute 'default nil :height 160)
 
 ;; 快速打开配置文件
 (defun open-init-file()
@@ -89,28 +160,5 @@
 ;; 这一行代码，将函数 open-init-file 绑定到 <f2> 键上
 (global-set-key (kbd "<f2>") 'open-init-file)
 
-;; (global-company-mode 1)
-
 
 (setq evil-insert-state-cursor 'bar)
-
-(require 'package)
-(setq package-archives '(("gnu"   . "http://elpa.emacs-china.org/gnu/")
-                           ("melpa" . "http://elpa.emacs-china.org/melpa/")))
-(package-initialize)
-(require 'evil)
-(global-evil-leader-mode)
-(evil-leader/set-leader "<SPC>")
-(evil-leader/set-key
-  "ff" 'find-file
-  "bb" 'switch-to-buffer
-  "0"  'select-window-0
-  "1"  'select-window-1
-  "2"  'select-window-2
-  "3"  'select-window-3
-  "w/" 'split-window-right
-  "w-" 'split-window-below
-  ":"  'counsel-M-x
-  "wM" 'delete-other-windows
-  )
-(evil-mode 1)
